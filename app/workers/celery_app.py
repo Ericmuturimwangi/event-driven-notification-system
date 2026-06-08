@@ -4,7 +4,8 @@ from app.core.config import settings
 celery_app = Celery(
     "event_notification",
     broker=settings.celery_broker_url,
-    backend = settings.celery_result_backend,
+    backend=settings.celery_result_backend,
+    include=["app.workers.tasks"],  # ensures process_notification is registered
 )
 
 celery_app.conf.update(
