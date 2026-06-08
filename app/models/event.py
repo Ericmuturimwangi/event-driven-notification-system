@@ -1,13 +1,11 @@
 from sqlalchemy import Column, String, JSON, DateTime, Enum as SQLEnum
-from sqlalchemy.dialects.postgresql import UUID 
-from sqlalchemy.sql import func 
- 
-from enum import Enum 
-from uuid import uuid4, UUID
-from datetime import datetime 
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.sql import func
+
+from enum import Enum
+from uuid import uuid4
+from datetime import datetime
 from app.db.base import Base
-from typing import Dict, Any, Optional
-from app.models.event import EventStatus
 
 class EventStatus(str, Enum):
     PENDING = "PENDING"

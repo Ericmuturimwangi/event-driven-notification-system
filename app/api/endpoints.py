@@ -14,7 +14,7 @@ router = APIRouter(
 
 @router.post(
     "",
-    response_model=EventCreateRequest,
+    response_model=EventCreateResponse,
     status_code=status.HTTP_202_ACCEPTED,
     summary="Create a notification event",
     description="""

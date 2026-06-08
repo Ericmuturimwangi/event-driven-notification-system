@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     celery_result_backend: str
 
     app_name : str = "Event Notification System"
-    debud: bool = False
+    debug: bool = False
 
     class Config:
         env_file =".env"

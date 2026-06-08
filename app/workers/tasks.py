@@ -1,7 +1,7 @@
 import logging
 from uuid import UUID
 from app.workers.celery_app import celery_app
-from app.services.notification_service import NotificationService
+from app.notification_service import NotificationService
 from app.services.event_service import EventService
 from app.models.event import EventStatus
 from app.db.session import SessionLocal

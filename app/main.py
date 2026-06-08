@@ -53,7 +53,7 @@ async def root() -> dict:
 
 @app.on_event("startup")
 async def startup_event():
-    logger.ingo(f"starting {setting.app_name}")
+    logger.info(f"starting {settings.app_name}")
     logger.info(f"Debug mode: {settings.debug}")
 
 

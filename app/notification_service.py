@@ -29,7 +29,7 @@ class NotificationService:
         subject = payload.get("subject", "No subject")
         message = payload.get("message", "No message")
 
-        logger.ingo(
+        logger.info(
             f"[EMAIL] To: {recipient} | Subject: {subject} | Message: {message}"
         )
 

@@ -44,4 +44,4 @@ class EventCreateResponse(BaseModel):
     message: str = "Event created and queued for processing"
 
     class Config:
-        from_attributed =True
+        from_attributes = True
