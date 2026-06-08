@@ -5,7 +5,7 @@ celery_app = Celery(
     "event_notification",
     broker=settings.celery_broker_url,
     backend=settings.celery_result_backend,
-    include=["app.workers.tasks"],  # ensures process_notification is registered
+    include=["app.workers.tasks"], 
 )
 
 celery_app.conf.update(
@@ -30,4 +30,3 @@ celery_app.conf.update(
 def debug_task(self):
     print(f"Request: {self.request!r}")
 
-    
