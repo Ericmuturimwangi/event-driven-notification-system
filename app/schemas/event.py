@@ -25,6 +25,12 @@ class EventCreateRequest(BaseModel):
         description="Event-specific data (JSON object)",
     )
 
+    idempotency_key: Optional[str] = Field(
+        default=None,
+        max_length=255,
+        description="Idempotency key for request deduplication. UUID or custom string.",
+    )
+
 class EventResponse(BaseModel):
 
     id: UUID
@@ -45,3 +51,24 @@ class EventCreateResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+
+class FailedEventResponse(BaseModel):
+
+    id: UUID
+    event_id: UUID
+    event_type: str
+    recipient: str
+    payload: Dict[str, Any]
+    error_message: str
+    error_traceback: Optional[str]
+    retry_count: int
+    max_retries: int
+    last_error_at: Optional[datetime]
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+        
