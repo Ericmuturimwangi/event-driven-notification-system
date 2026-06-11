@@ -5,7 +5,10 @@ from typing import Dict, Any
 from app.core.exceptions import (
     RetryableNotificationError,
     PermanentNotificationError,
+    CircuitOpenError,
 )
+
+from app.core.circuit_breaker import get_breaker
 
 logger = logging.getLogger(__name__)
 
@@ -20,55 +23,63 @@ class NotificationService:
     ) -> None:
     
         if event_type == "email":
-            NotificationService._send_email(recipient, payload)
+            if "@" not in recipient:
+                raise PermanentNotificationError(
+                    f"Invalid email recipient: {recipient}"
+                )
+            provider_call = NotificationService._contact_email_provider
+            
         elif event_type == "sms":
-            NotificationService._send_sms(recipient, payload)
+            provider_call = NotificationService._contact_sms_provider
 
         else:
             raise PermanentNotificationError(
                 f"Unknown notification type: {event_type}"
             )
 
-    @staticmethod
-    def _send_email(recipient: str, payload: Dict[str, Any]) -> None:
+        breaker = get_breaker(event_type)
 
-        if "@" not in recipient:
-            raise PermanentNotificationError(
-                f"Invalid email recipient: {recipient}"
+        try:
+
+            breaker.call(provider_call, recipient, payload)
+
+        except pybreaker.CircuitBreakerError:
+
+            logger.warning(
+                f"[CircuitBreaker:{event_type}] OPEN - rejected send to "
+                f"{recipient} without attempting"
             )
 
+            raise CircuitOpenError(
+                f"Circuit OPEN for channel '{event_type}'; provider "
+                f"considered down. Send not attempted. "
+            )
+
+    @staticmethod
+    def _contact_email_provider(recipient: str, payload: Dict[str, Any]) -> None:
         subject = payload.get("subject", "No subject")
         message = payload.get("message", "No message")
 
         logger.info(
             f"[EMAIL] To: {recipient} | Subject: {subject} | Message: {message}"
         )
-
         time.sleep(2)
 
         if "transient-fail" in recipient:
             raise RetryableNotificationError("Simulated SMTP timeout")
-        if "permanent-fail" in recipient:
-            raise PermanentNotificationError("Simulated hard bounce (550)")
 
         logger.info(f"[EMAIL] Successfully sent to {recipient}")
-        
+
 
     @staticmethod
-    def _send_sms(recipient: str, payload: Dict[str, Any]) -> None:
-
+    def _contact_sms_provider(recipient: str, payload: Dict[str, Any]) -> None:
         message = payload.get("message", "No message")
-
         logger.info(f"[SMS] To: {recipient} | Message: {message}")
-
         time.sleep(1)
 
         if "transient-fail" in recipient:
-            raise RetryableNotificationError("Simulated Twilio timeot")
-
-        if "permanent-fail" in recipient:
-            raise PermanentNotificationError("Simulated invalid number (21211)")
+            raise RetryableNotificationError("Simulated Twilio timeout")
 
         logger.info(f"[SMS] Successfully sent to {recipient}")
-    
+
         

@@ -7,3 +7,8 @@ class RetryableNotificationError(NotificationError):
 class PermanentNotificationError(NotificationError):
 
     """ Permanent Failure """
+
+class CircuitOpenError(NotificationError):
+    """
+    The circuit breaker for this channel is OPEN 
+    """

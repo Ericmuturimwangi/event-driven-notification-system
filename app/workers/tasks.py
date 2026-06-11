@@ -2,17 +2,15 @@ import logging
 import random
 from celery import Task
 from celery.exceptions import MaxRetriesExceededError
-
 import traceback
 from uuid import UUID
-
 from app.workers.celery_app import celery_app
 from app.notification_service import NotificationService
 from app.services.event_service import EventService
 from app.models.event import EventStatus
 from app.db.session import SessionLocal
 from app.core.config import settings
-from app.core.exceptions import PermanentNotificationError
+from app.core.exceptions import PermanentNotificationError, CircuitOpenError
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +19,7 @@ def _backoff_with_jitter(retry_number: int) -> float:
     delay = settings.task_retry_base_delay + (2 ** retry_number)
     delay = min(delay, settings.task_retry_max_delay)
     return delay * random.uniform(0.8, 1.2)
+
 
 class NotificationTask(Task):
 
@@ -75,6 +74,7 @@ def process_notification(
     event_type: str, 
     recipient: str, 
     payload: dict, 
+    circuit_reschedule_count: int = 0
 ) -> dict: 
 
     db = SessionLocal()
@@ -125,7 +125,51 @@ def process_notification(
             "event_id": event_id,
             "attempt": attempt,
         }
+    except CircuitOpenError as exc:
 
+        if circuit_reschedule_count >= settings.circuit_open_max_reschedules:
+            logger.error(
+                f"[Task] Event {event_id}: circuit for '{event_type}' still "
+                f"OPEN after {circuit_reschedule_count} reschedules. "
+                f"Routing to DLQ for human attention."
+            )
+
+            raise PermanentNotificationError(
+                f"Channel '{event_type}' circuit OPEN for "
+                f"{circuit_reschedule_count} consecutive reschedules "
+                f"(~{circuit_reschedule_count * settings.circuit_open_reschedule_delay // 60} min); "
+                f"giving up on event {event_id}."
+            )
+ 
+        delay = settings.circuit_open_reschedule_delay * random.uniform(0.8, 1.2)
+        logger.warning(
+            f"[Task] Event {event_id}: circuit OPEN for '{event_type}'. "
+            f"Rescheduling in {delay:.0f}s without consuming a retry "
+            f"(reschedule {circuit_reschedule_count + 1}/"
+            f"{settings.circuit_open_max_reschedules}, "
+            f"retry attempt stays {attempt}/{total_attempts})."
+        )
+
+        try:
+            EventService.update_status(db, event_uuid, EventStatus.PENDING)
+        except Exception:
+            pass  
+        process_notification.apply_async(
+            kwargs={
+                "event_id": event_id,
+                "event_type": event_type,
+                "recipient": recipient,
+                "payload": payload,
+                "circuit_reschedule_count": circuit_reschedule_count + 1,
+            },
+            countdown=delay,
+        )
+        return {
+            "status": "rescheduled_circuit_open",
+            "event_id": event_id,
+            "channel": event_type,
+            "reschedule_count": circuit_reschedule_count + 1,
+        }
 
     except PermanentNotificationError as exc:
 
