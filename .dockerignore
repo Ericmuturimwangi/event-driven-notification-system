@@ -8,3 +8,4 @@ venv/
 **/*.pyc
 **/*.pyo
 alembic/versions/
+test.sh

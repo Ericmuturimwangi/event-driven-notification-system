@@ -49,6 +49,7 @@ def process_notification(
             event_type=event_type,
             recipient=recipient,
             payload=payload,
+            retry_count=retry_count,
         )
 
         if not success:
@@ -75,6 +76,12 @@ def process_notification(
 
 
     except Exception as e:
+        if retry_count < self.max_retries:
+            logger.warning(
+                f"[Task] Error processing event {event_id} (attempt {retry_count + 1}): {str(e)}"
+            )
+            raise self.retry(exc=e, countdown=2 ** (retry_count + 2))
+
         logger.error(
             f"[Task] Event {event_id} exhausted max retries ({self.max_retries}). Moving to DLQ."
         )
@@ -102,12 +109,6 @@ def process_notification(
             "message": f"Task failed after {self.max_retries} retries. Moved to DLQ.",
         }
 
-    except Exception as e:
-        logger.warning(
-            F"[Task] Error processing event {event_id} (attempt {retry_count + 1}): {str(e)}"
-        )
-        raise self.retry(exc=e, countdown=2 ** (retry_count + 2))
-        
     finally:
         db.close()
 

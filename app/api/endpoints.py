@@ -90,7 +90,7 @@ async def get_dlq_events(
 ) -> list[FailedEventResponse]:
 
 
-    failed_events = EventService.get_dlq_event(
+    failed_events = EventService.get_dlq_events(
         db,
         event_type=event_type,
         limit = limit,

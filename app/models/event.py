@@ -37,9 +37,16 @@ class Event(Base):
     )
     
     payload =Column(
-        JSON, 
+        JSON,
         nullable=False,
         default=dict,
+    )
+
+    idempotency_key = Column(
+        String(255),
+        nullable=True,
+        unique=True,
+        index=True,
     )
 
     status =Column(

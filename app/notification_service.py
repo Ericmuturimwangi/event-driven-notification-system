@@ -7,12 +7,25 @@ logger = logging.getLogger(__name__)
 class NotificationService:
 
     @staticmethod
-    def send( 
-        event_type: str, 
-        recipient: str, 
+    def send(
+        event_type: str,
+        recipient: str,
         payload: Dict[str, Any],
+        retry_count: int = 0,
     ) -> bool:
 
+        if "permanent_fail" in recipient:
+            logger.info(
+                f"[{event_type.upper()}] Simulated permanent failure for {recipient}"
+            )
+            return False
+
+        if "retry_test" in recipient and retry_count == 0:
+            logger.info(
+                f"[{event_type.upper()}] Simulated transient failure for {recipient} "
+                f"(attempt {retry_count + 1})"
+            )
+            return False
 
         if event_type == "email":
             return NotificationService._send_email(recipient, payload)
