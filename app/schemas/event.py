@@ -80,6 +80,9 @@ class FailedEventResponse(BaseModel):
     retry_count: int
     max_retries: int
     last_error_at: Optional[datetime]
+    replayed_at: Optional[datetime]
+    replay_event_id: Optional[UUID]
+    resolved_at: Optional[datetime]
     created_at: datetime
     updated_at: datetime
 
