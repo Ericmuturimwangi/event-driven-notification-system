@@ -5,7 +5,7 @@ celery_app = Celery(
     "event_notification",
     broker=settings.celery_broker_url,
     backend=settings.celery_result_backend,
-    include=["app.workers.tasks"], 
+    include=["app.workers.tasks"],
 )
 
 celery_app.conf.update(
@@ -21,6 +21,8 @@ celery_app.conf.update(
     task_time_limit=30 * 60,
     task_soft_time_limit = 25 *60,
     task_acks_late=True,
+
+    broker_transport_options ={"visibility_timeout": 7200},
 
     worker_prefetch_multiplier =4,
     worker_max_tasks_per_child = 1000,
