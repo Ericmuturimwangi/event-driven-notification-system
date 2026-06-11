@@ -7,5 +7,4 @@ venv/
 **/__pycache__/
 **/*.pyc
 **/*.pyo
-alembic/versions/
 test.sh

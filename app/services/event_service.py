@@ -1,3 +1,4 @@
+from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from uuid import UUID
@@ -48,6 +49,8 @@ class EventService:
                 if existing_event:
                     return existing_event
 
+            raise
+
     @staticmethod
     def update_status(
         db:Session,
@@ -95,6 +98,7 @@ class EventService:
             error_traceback = error_traceback,
             retry_count = retry_count,
             max_retries = max_retries,
+            last_error_at = datetime.utcnow(),
         )
 
         db.add(failed_event)
@@ -108,26 +112,63 @@ class EventService:
 
 
     @staticmethod
-
     def get_dlq_events(
         db:Session,
         event_type: str = None,
+        include_resolved: bool = False,
         limit: int = 100,
         offset: int =0,
     ) -> list[FailedEvent]:
 
         query = db.query(FailedEvent)
 
+        if not include_resolved:
+            query = query.filter(FailedEvent.resolved_at.is_(None))
+
         if event_type:
             query = query.filter(FailedEvent.event_type == event_type)
 
         return query.order_by(FailedEvent.created_at.desc()).limit(limit).offset(offset).all()
 
-    
     @staticmethod
-
     def get_dlq_event(db: Session, failed_event_id: UUID) -> FailedEvent:
 
         return db.query(FailedEvent).filter(FailedEvent.id == failed_event_id).first()
+
+
+    @staticmethod
+    def mark_replayed(
+        db:Session,
+        failed_event_id: UUID,
+        replay_event_id: UUID,
+    ) -> FailedEvent:
+
+        failed_event = EventService.get_dlq_event(db, failed_event_id)
+        if not failed_event:
+            raise ValueError(f"DLQ record {failed_event_id} not found")
+
+        now = datetime.utcnow()
+        failed_event.replayed_at = now
+        failed_event.replay_event_id = replay_event_id
+        failed_event.resolved_at = now
+
+        db.commit()
+        db.refresh(failed_event)
+        return failed_event
+
+    @staticmethod
+    def resolve_dlq_event(db: Session, failed_event_id: UUID) -> FailedEvent:
+
+        failed_event = EventService.get_dlq_event(db, failed_event_id)
+        if not failed_event:
+            raise ValueError(f"DLQ record {failed_event_id} not found")
+
+        if failed_event.resolved_at is None:
+            failed_event.resolved_at = datetime.utcnow()
+            db.commit()
+            db.refresh(failed_event)
+
+        return failed_event
+        
         
          

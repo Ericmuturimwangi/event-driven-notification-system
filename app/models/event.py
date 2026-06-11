@@ -136,6 +136,22 @@ class FailedEvent(Base):
         nullable=True,
     )
 
+    replayed_at = Column(
+        DateTime,
+        nullable=True,
+    )
+
+    replay_event_id = Column(
+        UUID(as_uuid=True),
+        nullable=True,
+    )
+
+    resolved_at = Column(
+        DateTime,
+        nullable=True,
+        index=True,
+    )
+
     created_at = Column(
         DateTime,
         nullable=False,

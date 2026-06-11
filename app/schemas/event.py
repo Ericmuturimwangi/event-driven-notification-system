@@ -53,6 +53,21 @@ class EventCreateResponse(BaseModel):
         from_attributes = True
 
 
+class DLQReplayRequest(BaseModel):
+
+    recipient: Optional[str] = Field(
+        default=None,
+        min_length=1,
+        max_length=255,
+        description="Override recipient for the replayed event",
+    )
+
+    payload: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Override payload for the replayed event",
+    )
+
+
 class FailedEventResponse(BaseModel):
 
     id: UUID
